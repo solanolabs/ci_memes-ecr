@@ -1,0 +1,34 @@
+# Trigger build on docker-enabled workers. Contact support@solanolabs.com to gain access to the docker queue.
+system:
+  docker: true
+  queue: docker
+
+environment:
+  'DEPLOY_AWS_ECS': 'true'
+  # For sensitive values, use `solano config:add repo <key> <value>` from the cli
+  # See: http://docs.solanolabs.com/Setup/setting-environment-variables/#via-config-variables
+  # 'AWS_ACCESS_KEY_ID': '<set-with-cli>'
+  # 'AWS_SECRET_ACCESS_KEY': '<set-with-cli>'
+  # 'AWS_DEFAULT_REGION': '<set-with-cli>'
+  # 'AWS_ACCOUNT_ID': '<set-with-cli>'
+
+# See the individual script files for the actions performed by each setup hook.
+# (http://docs.solanolabs.com/Setup/setup-hooks/)
+hooks:
+  pre_setup: ./scripts/solano-pre_setup.sh
+  worker_setup: ./scripts/solano-worker_setup.sh
+  post_build: ./scripts/solano-deploy.sh 
+
+php:
+  php_version: "5.6"
+
+mysql:
+  adapter: 'mysql2'
+
+tests:
+  - type: phpunit
+    mode: parallel
+    command: ./vendor/bin/solano-phpunit
+    config: phpunit.xml
+    files:
+      - tests/**_test.php
