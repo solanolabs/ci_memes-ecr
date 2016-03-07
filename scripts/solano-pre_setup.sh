@@ -4,9 +4,18 @@
 set -o errexit -o pipefail # Exit on error
 
 # Ensure the necessary environment variables have been set
-if [[ -z "$AWS_ACCESS_KEY_ID" || -z "$AWS_SECRET_ACCESS_KEY" || -z "$AWS_DEFAULT_REGION" || -z "$AWS_ACCOUNT_ID" ]]; then
-  echo 'ERROR: The $AWS_ACCESS_KEY_ID, $AWS_SECRET_ACCESS_KEY, $AWS_DEFAULT_REGION, and $AWS_ACCOUNT_ID values are not all set!'
-  echo 'Please use `solano config:add repo <key> <value>` to set these values'
+required_vars="AWS_DEFAULT_REGION AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_ACCOUNT_ID AWS_IAM_ROLE_NAME AWS_ECS_TASK AWS_ECS_SERVICE AWS_ECS_CLUSTER AWS_ECR_REPO"
+vars_set=true
+for var in $required_vars; do
+  eval val=\""\$$var"\"
+  if [ "$val" == "" ]; then
+    echo "ERROR: $var is not set"
+    vars_set=false
+  fi
+done
+if [ "$vars_set" == "false" ]; then
+  echo "ERROR: Not all required environemnt variables are set"
+  echo 'Please use `solano config:add <scope> <key> <value>` to set these values'
   echo 'See: http://docs.solanolabs.com/Setup/setting-environment-variables/#via-config-variables'
   exit 1
 fi
@@ -29,12 +38,19 @@ if [[ ! -f "$HOME/bin/jq" ]]; then
   chmod +x $HOME/bin/jq # $HOME/bin is in $PATH
 fi
 
+# Assume IAM role and save role credentials in .aws_env file for later use
+aws sts assume-role --role-arn "arn:aws:iam::${AWS_ACCOUNT_ID}:role/${AWS_IAM_ROLE_NAME}" --role-session-name "Session-${AWS_IAM_ROLE_NAME}" > .aws_env.json
+echo "export AWS_ACCESS_KEY_ID=`jq '.Credentials.AccessKeyId' .aws_env.json | sed 's#"##g'`" > .aws_env
+echo "export AWS_SECRET_ACCESS_KEY=`jq '.Credentials.SecretAccessKey' .aws_env.json | sed 's#"##g'`" >> .aws_env
+echo "export AWS_SESSION_TOKEN=`jq '.Credentials.SessionToken' .aws_env.json | sed 's#"##g'`" >> .aws_env
+source .aws_env
+
 # Fetch Amazon ECR generated docker login command and login
 LOGIN_CMD=`aws ecr get-login`
 sudo $LOGIN_CMD
 
 # Build the image
-sudo docker build -t $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/ci_memes:$TDDIUM_SESSION_ID .
+sudo docker build -t $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/${AWS_ECR_REPO}:$TDDIUM_SESSION_ID .
 
 # Install PHP dependencies
 composer install

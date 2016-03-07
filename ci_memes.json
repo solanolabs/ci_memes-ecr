@@ -1,9 +1,9 @@
 {
-  "family": "ci_memes",
+  "family": "%AWS_ECS_TASK%",
   "containerDefinitions": [
     {
-      "name": "ci_memes",
-      "image": "%AWS_ACCOUNT_ID%.dkr.ecr.us-east-1.amazonaws.com/ci_memes:%TDDIUM_SESSION_ID%",
+      "name": "%AWS_ECS_TASK%",
+      "image": "%AWS_ACCOUNT_ID%.dkr.ecr.us-east-1.amazonaws.com/%AWS_ECR_REPO%:%TDDIUM_SESSION_ID%",
       "cpu": 100,
       "memory": 256,
       "entryPoint": [

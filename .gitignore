@@ -1,2 +1,4 @@
 .solano*
 .DS_Store
+.aws_env*
+ci_memes-*.json
